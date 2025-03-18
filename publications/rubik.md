@@ -6,7 +6,7 @@ venue: "CVPR - Main Conference"
 year: 2025
 thumbnail: "assets/images/publications/rubik-thumbnail.jpg"
 links:
-  paper: "https://arxiv.org/abs/2502.19955"
+  paper: "arxiv.org/abs/2502.19955"
   code: ""
   website: ""
   bibtex: "assets/bibtex/rubik-2025.bib"

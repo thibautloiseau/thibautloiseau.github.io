@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     try {
         // Fetch the list of publication files
-        const response = await fetch('publications/list.json');
+        const response = await fetch('../publications/list.json');
         const publicationFiles = await response.json();
         
         // Load each publication
         for (const file of publicationFiles) {
-            const pubResponse = await fetch(`publications/${file}`);
+            const pubResponse = await fetch(`../publications/${file}`);
             const pubText = await pubResponse.text();
             
             // Parse the YAML frontmatter and markdown
@@ -75,7 +75,7 @@ function createPublicationCard(pub) {
     function ensureAbsoluteUrl(url) {
         if (!url) return '';
         if (url.startsWith('http://') || url.startsWith('https://')) {
-            return url;
+            return `${url}`;
         }
         return `https://${url}`;
     }
