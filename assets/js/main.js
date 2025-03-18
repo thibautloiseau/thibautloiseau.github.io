@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     try {
         // Fetch the list of publication files
-        const response = await fetch('assets/publications/list.json');
+        const response = await fetch('publications/list.json');
         const publicationFiles = await response.json();
         
         // Load each publication
         for (const file of publicationFiles) {
-            const pubResponse = await fetch(`assets/publications/${file}`);
+            const pubResponse = await fetch(`publications/${file}`);
             const pubText = await pubResponse.text();
             
             // Parse the YAML frontmatter and markdown
