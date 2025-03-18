@@ -6,7 +6,7 @@ venue: "arXiv preprint"
 year: 2025
 thumbnail: "assets/images/publications/alligator-thumbnail.jpg"
 links:
-  paper: "arxiv.org/abs/2503.07561"
+  paper: "https://arxiv.org/abs/2503.07561"
   code: ""
   website: ""
   bibtex: "assets/bibtex/alligator-2025.bib"

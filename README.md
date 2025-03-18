@@ -92,34 +92,6 @@ links:
 Abstract text goes here. This should be the full abstract as it appears in the paper.
 ```
 
-## Step 5: Add a New Publication (Future)
-
-1. Create a thumbnail image for your paper and save it to `assets/images/publications/`
-2. Create a BibTeX file for your paper and save it to `assets/bibtex/`
-3. Copy `template.md` to a new file (e.g., `new-paper.md`)
-4. Fill in the YAML frontmatter and abstract
-5. Add the new file name to `publications/list.json`
-
-Example:
-
-```markdown
----
-id: new-paper-2025
-title: "My New Paper Title"
-authors: Thibaut Loiseau, Coauthor One, Coauthor Two
-venue: ICCV 2025
-year: 2025
-thumbnail: assets/images/publications/new-paper-thumbnail.jpg
-links:
-  paper: https://arxiv.org/abs/xxxx.xxxxx
-  code: https://github.com/yourgithub/new-paper
-  website: https://your-project-website.com/new-paper
-  bibtex: assets/bibtex/new-paper-2025.bib
----
-
-This is the abstract of my new paper. It describes the contributions and findings of the research...
-```
-
 ## Step 6: Deploy to GitHub Pages
 
 1. Commit your changes:
