@@ -7,7 +7,7 @@ year: 2025
 thumbnail: "assets/images/publications/rubik-thumbnail.jpg"
 links:
   paper: "arxiv.org/abs/2502.19955"
-  code: ""
+  code: "https://github.com/thibautloiseau/RUBIK"
   website: ""
   bibtex: "assets/bibtex/rubik-2025.bib"
 ---

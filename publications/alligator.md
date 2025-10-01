@@ -2,7 +2,7 @@
 id: alligator-2025
 title: "Alligat0R: Pre-Training through Co-Visibility Segmentation for Relative Camera Pose Regression"
 authors: "Thibaut Loiseau, Guillaume Bourmaud, Vincent Lepetit"
-venue: "arXiv preprint"
+venue: "NeurIPS - Main Conference <span style='color:red'>(Spotlight)</span>"
 year: 2025
 thumbnail: "assets/images/publications/alligator-thumbnail.jpg"
 links:
