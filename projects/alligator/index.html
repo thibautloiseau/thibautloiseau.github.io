@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alligat0R - Pre-Training through Covisibility Segmentation for Relative Camera Pose Regression</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg-surface: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #7c3aed;
+            --text: #1a1a2e;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --venue: #059669;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --bg-surface: #1e293b;
+            --primary: #60a5fa;
+            --primary-hover: #93bbfd;
+            --secondary: #a78bfa;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --venue: #34d399;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text); line-height: 1.7; background: var(--bg);
+            transition: background-color var(--transition), color var(--transition);
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: var(--primary); text-decoration: none; transition: color var(--transition); }
+        a:hover { color: var(--primary-hover); }
+        ::selection { background: var(--primary); color: #fff; }
+
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(250,250,250,0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 0 var(--border);
+            transition: background-color var(--transition);
+        }
+        [data-theme="dark"] .navbar { background: rgba(15,23,42,0.85); }
+        .nav-inner {
+            max-width: 900px; margin: 0 auto; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between; height: 56px;
+        }
+        .nav-back {
+            font-size: 0.88rem; font-weight: 500; color: var(--text-muted);
+            display: flex; align-items: center; gap: 6px; transition: color var(--transition);
+        }
+        .nav-back:hover { color: var(--text); }
+        .theme-toggle {
+            background: none; border: 1px solid var(--border);
+            width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); transition: all var(--transition);
+        }
+        .theme-toggle:hover { color: var(--text); border-color: var(--text-muted); background: var(--border); }
+        .theme-toggle .fa-sun { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-moon { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-sun { display: inline; color: #fbbf24; }
+
+        .hero {
+            position: relative; padding: 120px 24px 60px;
+            text-align: center; overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, #0f4c3a 0%, #059669 40%, #2563eb 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 12s ease infinite;
+        }
+        .hero-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .hero-inner {
+            position: relative; z-index: 1; max-width: 800px; margin: 0 auto;
+        }
+        .hero-icon {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+            border-radius: 16px; overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #059669, #0f4c3a);
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px;
+        }
+        .hero-icon img { width: 100%; height: auto; display: block; }
+        .hero-venue {
+            display: inline-block; padding: 4px 16px; border-radius: 50px;
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+            color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .hero-venue .spotlight { color: #fbbf24; }
+        .hero-title {
+            font-size: 2.5rem; font-weight: 800; color: #fff;
+            letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 12px;
+        }
+        .hero-title .accent { color: rgba(255,255,255,0.7); font-weight: 600; }
+        .hero-authors {
+            color: rgba(255,255,255,0.85); font-size: 1.05rem; margin-bottom: 8px;
+        }
+        .hero-authors a { color: rgba(255,255,255,0.95); border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .hero-authors a:hover { color: #fff; border-color: #fff; }
+        .hero-affiliations {
+            color: rgba(255,255,255,0.55); font-size: 0.88rem; margin-bottom: 28px;
+        }
+        .hero-links {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+        }
+        .hero-link {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 20px; border-radius: 50px;
+            background: rgba(255,255,255,0.14); backdrop-filter: blur(10px);
+            color: #fff; font-size: 0.88rem; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.18);
+            transition: all var(--transition);
+        }
+        .hero-link:hover {
+            background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.35);
+            transform: translateY(-2px); color: #fff;
+        }
+
+        .content { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+        .section { padding: 60px 0 0; }
+        .section-title {
+            font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em;
+            margin-bottom: 24px; display: inline-block;
+        }
+        .section-title span { position: relative; }
+        .section-title span::after {
+            content: ''; position: absolute; left: 0; bottom: -4px;
+            width: 100%; height: 3px; border-radius: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary)); opacity: 0.8;
+        }
+        .abstract { font-size: 1.02rem; line-height: 1.85; color: var(--text); }
+
+        .highlights {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px;
+        }
+        .highlight-card {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px 20px; text-align: center;
+            box-shadow: var(--shadow-sm); transition: all var(--transition);
+        }
+        .highlight-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .highlight-number {
+            font-size: 2rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            line-height: 1.2;
+        }
+        .highlight-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+        .figure { margin: 32px 0; text-align: center; }
+        .figure img {
+            max-width: 100%; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+        .figure-caption {
+            margin-top: 12px; font-size: 0.88rem; color: var(--text-muted);
+            line-height: 1.6; max-width: 700px; margin-left: auto; margin-right: auto;
+        }
+
+        .contrib-list { list-style: none; margin-top: 8px; }
+        .contrib-list li {
+            position: relative; padding: 16px 20px 16px 48px; margin-bottom: 12px;
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow-sm);
+            transition: all var(--transition);
+        }
+        .contrib-list li:hover { box-shadow: var(--shadow-md); }
+        .contrib-list li::before {
+            content: attr(data-num); position: absolute; left: 16px; top: 16px;
+            width: 22px; height: 22px; border-radius: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff; font-size: 0.72rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .contrib-list li strong { color: var(--text); }
+
+        .table-wrapper {
+            overflow-x: auto; margin: 16px 0;
+            border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.85rem; background: var(--bg-surface);
+        }
+        thead { background: color-mix(in srgb, var(--primary) 6%, var(--bg-surface)); }
+        th {
+            padding: 12px 14px; font-weight: 600; text-align: left;
+            border-bottom: 2px solid var(--border); color: var(--text); white-space: nowrap;
+        }
+        td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: color-mix(in srgb, var(--primary) 3%, transparent); }
+        .table-category { font-weight: 600; font-style: italic; color: var(--text-muted); font-size: 0.8rem; padding-top: 14px; }
+        .best { font-weight: 700; color: var(--primary); }
+        .second { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+        .qualitative-grid {
+            display: flex; flex-direction: column; gap: 12px; margin-top: 16px;
+        }
+        .qualitative-grid img {
+            width: 100%; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+
+        .color-legend {
+            display: flex; gap: 20px; justify-content: center;
+            margin: 16px 0 8px; font-size: 0.88rem; font-weight: 500;
+        }
+        .color-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .color-dot {
+            width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+        }
+
+        .bibtex-block {
+            background: color-mix(in srgb, var(--border) 40%, var(--bg));
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; position: relative; margin-top: 12px;
+        }
+        .bibtex-block pre {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+            line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--text);
+        }
+        .copy-btn {
+            position: absolute; top: 12px; right: 12px;
+            padding: 6px 14px; border-radius: 8px;
+            background: var(--primary); color: #fff; border: none;
+            font-size: 0.8rem; font-weight: 500; font-family: inherit; cursor: pointer;
+            display: flex; align-items: center; gap: 5px; transition: all var(--transition);
+        }
+        .copy-btn:hover { background: var(--primary-hover); }
+
+        footer {
+            margin-top: 80px; padding: 28px 0; text-align: center;
+            border-top: 1px solid var(--border); transition: border-color var(--transition);
+        }
+        footer p { font-size: 0.85rem; color: var(--text-muted); }
+
+        .fade-in {
+            opacity: 0; transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            .hero { padding: 100px 20px 48px; }
+            .hero-title { font-size: 1.7rem; }
+            .highlights { grid-template-columns: 1fr; }
+            .hero-links { gap: 8px; }
+            .hero-link { padding: 8px 14px; font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../../" class="nav-back"><i class="fas fa-arrow-left"></i> Thibaut Loiseau</a>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+                <i class="fas fa-sun"></i>
+            </button>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-inner">
+            <div class="hero-icon">
+                <img src="assets/alligator-icon.png" alt="Alligat0R">
+            </div>
+            <div class="hero-venue">NeurIPS 2025 &mdash; <span class="spotlight">Spotlight</span></div>
+            <h1 class="hero-title">Alligat0R <span class="accent"><br>Pre-Training through Covisibility Segmentation for Relative Camera Pose Regression</span></h1>
+            <p class="hero-authors">
+                <a href="../../">Thibaut Loiseau</a><sup>1</sup> &nbsp;&middot;&nbsp;
+                <a href="https://gbourmaud.github.io" target="_blank">Guillaume Bourmaud</a><sup>2</sup> &nbsp;&middot;&nbsp;
+                <a href="https://vincentlepetit.github.io" target="_blank">Vincent Lepetit</a><sup>1</sup>
+            </p>
+            <p class="hero-affiliations">
+                <sup>1</sup>LIGM, Ecole des Ponts, Univ. Gustave Eiffel, CNRS &nbsp;&nbsp;
+                <sup>2</sup>IMS, Univ. de Bordeaux, CNRS
+            </p>
+            <div class="hero-links">
+                <a href="https://arxiv.org/abs/2503.07561" target="_blank" class="hero-link">
+                    <i class="fas fa-file-pdf"></i> Paper
+                </a>
+                <a href="https://github.com/thibautloiseau/alligat0r" target="_blank" class="hero-link">
+                    <i class="fab fa-github"></i> Code
+                </a>
+                <a href="#bibtex" class="hero-link">
+                    <i class="fas fa-quote-right"></i> BibTeX
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="content">
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Abstract</span></h2>
+            <p class="abstract">
+                Pre-training techniques have greatly advanced computer vision, with CroCo's cross-view completion approach yielding impressive results in tasks like 3D reconstruction and pose regression. However, cross-view completion is ill-posed in non-covisible regions, limiting its effectiveness. We introduce <strong>Alligat0R</strong>, a novel pre-training approach that replaces cross-view learning with a <strong>covisibility segmentation</strong> task. Our method predicts whether each pixel in one image is covisible in the second image, occluded, or outside the field of view, making the pre-training effective in both covisible and non-covisible regions, and provides interpretable predictions. To support this, we present <strong>Cub3</strong>, a large-scale dataset with <strong>5M image pairs</strong> and dense covisibility annotations derived from the nuScenes and ScanNet datasets. The experiments show that Alligat0R significantly outperforms CroCo in relative pose regression.
+            </p>
+            <div class="figure">
+                <img src="assets/teaser.png" alt="Alligat0R teaser: covisibility segmentation vs cross-view completion">
+                <p class="figure-caption"><strong>Alligat0R vs. CroCo.</strong> CroCo attempts to reconstruct potentially non-covisible regions (an ill-posed task), resulting in blurred outputs. Alligat0R instead explicitly segments pixels as <span style="color:#34d399;font-weight:600;">covisible</span>, <span style="color:#f59e0b;font-weight:600;">occluded</span>, or <span style="color:#94a3b8;font-weight:600;">outside FOV</span>, overcoming this fundamental limitation.</p>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>At a Glance</span></h2>
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="highlight-number">5M</div>
+                    <div class="highlight-label">Image Pairs (Cub3)</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">60.3%</div>
+                    <div class="highlight-label">Success on RUBIK (SoTA)</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">57ms</div>
+                    <div class="highlight-label">Inference Time</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Contributions</span></h2>
+            <ul class="contrib-list">
+                <li data-num="1"><strong>Covisibility segmentation as pre-training.</strong> We introduce a novel pre-training objective that classifies each pixel as covisible, occluded, or outside FOV, replacing CroCo's cross-view completion. This makes pre-training effective in both covisible and non-covisible regions.</li>
+                <li data-num="2"><strong>Cub3 dataset.</strong> We create a large-scale dataset of 5M image pairs with dense covisibility annotations from nuScenes and ScanNet, available in two variants: Cub3-50 (high overlap) and Cub3-all (any overlap &ge; 5%).</li>
+                <li data-num="3"><strong>State-of-the-art pose regression.</strong> Alligat0R significantly outperforms CroCo on relative pose regression, achieving 60.3% success rate on RUBIK (vs. 38.6% for CroCo) and 92.5% on ScanNet1500 (vs. 87.4%).</li>
+                <li data-num="4"><strong>Interpretable geometric reasoning.</strong> The covisibility segmentation outputs provide direct insight into the model's understanding of scene geometry and cross-view relationships.</li>
+            </ul>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Method</span></h2>
+            <p class="abstract">
+                Alligat0R uses the same encoder-decoder architecture as CroCo (ViT encoder + cross-attention decoder), but replaces the reconstruction objective with covisibility segmentation. During pre-training, both images are processed symmetrically (no masking), and the model learns to classify every pixel into three classes. For downstream pose regression, a regression head is added on top, and fine-tuning proceeds in two phases: first with a frozen backbone, then jointly with the segmentation head.
+            </p>
+            <div class="figure">
+                <img src="assets/method.png" alt="Alligat0R architecture overview">
+                <p class="figure-caption"><strong>Architecture overview.</strong> (a) During pre-training, each pixel is classified as <span style="color:#34d399;font-weight:600;">covisible</span>, <span style="color:#f59e0b;font-weight:600;">occluded</span>, or <span style="color:#94a3b8;font-weight:600;">outside FOV</span>. (b) For fine-tuning on pose regression, features from both views are pooled, processed through a shared MLP, and fed to separate translation and rotation heads.</p>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Main Results</span></h2>
+            <p class="abstract" style="margin-bottom: 16px;">
+                We evaluate Alligat0R against CroCo pre-training on the RUBIK benchmark (autonomous driving) and ScanNet1500 (indoor), using the same architecture and fine-tuning protocol for fair comparison.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pre-training</th>
+                            <th>Data</th>
+                            <th>Backbone</th>
+                            <th colspan="2" style="text-align:center;">RUBIK</th>
+                            <th colspan="2" style="text-align:center;">ScanNet1500</th>
+                        </tr>
+                        <tr>
+                            <th></th><th></th><th></th>
+                            <th>5&deg;/2m</th><th>10&deg;/5m</th>
+                            <th>10&deg;/0.25m</th><th>10&deg;/1m</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" class="table-category">Frozen backbone</td></tr>
+                        <tr><td>CroCo</td><td>Cub3-50</td><td>Frozen</td><td>21.8</td><td>48.1</td><td>48.3</td><td>69.3</td></tr>
+                        <tr><td>CroCo</td><td>Cub3-all</td><td>Frozen</td><td>8.9</td><td>25.2</td><td>8.7</td><td>24.9</td></tr>
+                        <tr><td>Alligat0R</td><td>Cub3-50</td><td>Frozen</td><td>32.4</td><td>58.4</td><td>47.5</td><td>63.4</td></tr>
+                        <tr><td class="best">Alligat0R</td><td class="best">Cub3-all</td><td>Frozen</td><td class="second">55.3</td><td class="best">82.3</td><td>78.2</td><td>92.5</td></tr>
+                        <tr><td colspan="7" class="table-category">Unfrozen backbone</td></tr>
+                        <tr><td>CroCo</td><td>Cub3-50</td><td>Unfrozen</td><td>38.3</td><td>66.7</td><td>75.7</td><td>91.5</td></tr>
+                        <tr><td>CroCo</td><td>Cub3-all</td><td>Unfrozen</td><td>38.6</td><td>66.2</td><td>64.1</td><td>85.0</td></tr>
+                        <tr><td>Alligat0R</td><td>Cub3-50</td><td>Unfrozen</td><td>53.3</td><td>78.1</td><td class="second">82.8</td><td class="second">93.9</td></tr>
+                        <tr><td class="best">Alligat0R</td><td class="best">Cub3-all</td><td>Unfrozen</td><td class="best">60.3</td><td class="second">81.9</td><td class="best">85.5</td><td class="best">95.1</td></tr>
+                        <tr><td colspan="7" class="table-category">Baseline</td></tr>
+                        <tr><td>From scratch</td><td>Cub3-all</td><td>Unfrozen</td><td>29.1</td><td>52.3</td><td>37.0</td><td>57.2</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="figure">
+                <img src="assets/performance.png" alt="Performance comparison across geometric challenges">
+                <p class="figure-caption"><strong>Performance across geometric challenges.</strong> Success rate at 5&deg;/2m on RUBIK, broken down by overlap, scale ratio, and viewpoint angle. Alligat0R trained on Cub3-all (red) consistently outperforms other configurations, especially in challenging low-overlap and extreme viewpoint scenarios.</p>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Qualitative Results</span></h2>
+            <p class="abstract" style="margin-bottom: 8px;">
+                Comparisons of CroCo's reconstructions and Alligat0R's covisibility segmentations on image pairs from nuScenes (outdoor) and ScanNet (indoor). While CroCo produces blurred results in non-covisible regions, Alligat0R correctly identifies the geometric relationships.
+            </p>
+            <div class="color-legend">
+                <span><span class="color-dot" style="background:#34d399;"></span> Covisible</span>
+                <span><span class="color-dot" style="background:#f59e0b;"></span> Occluded</span>
+                <span><span class="color-dot" style="background:#94a3b8;"></span> Outside FOV</span>
+            </div>
+            <div class="qualitative-grid">
+                <img src="assets/quali_nuscenes.jpg" alt="Qualitative result on nuScenes">
+                <img src="assets/quali_scannet.jpg" alt="Qualitative result on ScanNet">
+            </div>
+            <p class="figure-caption" style="margin-top: 12px;">Each row shows: Reference image, Target image, Masked input for CroCo, CroCo reconstruction, and Alligat0R segmentation outputs for both views.</p>
+        </section>
+
+        <section class="section fade-in" id="bibtex">
+            <h2 class="section-title"><span>Citation</span></h2>
+            <div class="bibtex-block">
+                <button class="copy-btn" id="copy-bibtex"><i class="fas fa-copy"></i> Copy</button>
+                <pre>@article{loiseau2026alligat0r,
+  title={Alligat0r: Pre-training through covisibility segmentation
+         for relative camera pose regression},
+  author={Loiseau, Thibaut and Bourmaud, Guillaume and Lepetit, Vincent},
+  journal={Advances in Neural Information Processing Systems},
+  volume={38},
+  pages={13762--13789},
+  year={2026}
+}</pre>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Acknowledgments</span></h2>
+            <p class="abstract" style="font-size:0.92rem;">
+                This project has received funding from the Bosch Research Foundation (Bosch Forschungsstiftung), the European Union (ERC Advanced Grant Explorer, Funding ID #101097259), and was granted access to the HPC resources of IDRIS under the allocation 2024-AD011014905R1 made by GENCI.
+            </p>
+        </section>
+    </div>
+
+    <footer>
+        <div class="content">
+            <p>&copy; 2026 Thibaut Loiseau &middot; <a href="../../">Back to main page</a></p>
+        </div>
+    </footer>
+
+    <script>
+        var root = document.documentElement;
+        var toggle = document.getElementById('theme-toggle');
+        var saved = localStorage.getItem('theme');
+        if (saved) root.setAttribute('data-theme', saved);
+        else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+        toggle.addEventListener('click', function () {
+            var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+        });
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        document.querySelectorAll('.fade-in').forEach(function (el) { obs.observe(el); });
+        document.getElementById('copy-bibtex').addEventListener('click', function () {
+            var text = this.parentElement.querySelector('pre').textContent;
+            var btn = this;
+            navigator.clipboard.writeText(text).then(function () {
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
