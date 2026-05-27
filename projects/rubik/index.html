@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUBIK - A Structured Benchmark for Image Matching across Geometric Challenges</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg-surface: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #7c3aed;
+            --text: #1a1a2e;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --venue: #059669;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --bg-surface: #1e293b;
+            --primary: #60a5fa;
+            --primary-hover: #93bbfd;
+            --secondary: #a78bfa;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --venue: #34d399;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            line-height: 1.7;
+            background: var(--bg);
+            transition: background-color var(--transition), color var(--transition);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+        a:hover { color: var(--primary-hover); }
+
+        ::selection { background: var(--primary); color: #fff; }
+
+        /* ===== Navbar ===== */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(250, 250, 250, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 0 var(--border);
+            transition: background-color var(--transition);
+        }
+        [data-theme="dark"] .navbar {
+            background: rgba(15, 23, 42, 0.85);
+        }
+        .nav-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+        .nav-back {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color var(--transition);
+        }
+        .nav-back:hover { color: var(--text); }
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: all var(--transition);
+        }
+        .theme-toggle:hover { color: var(--text); border-color: var(--text-muted); background: var(--border); }
+        .theme-toggle .fa-sun { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-moon { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-sun { display: inline; color: #fbbf24; }
+
+        /* ===== Hero ===== */
+        .hero {
+            position: relative;
+            padding: 120px 24px 60px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 40%, #7c3aed 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 12s ease infinite;
+        }
+        .hero-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .hero-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+        .hero-title .accent { color: rgba(255,255,255,0.7); font-weight: 600; }
+        .hero-venue {
+            display: inline-block;
+            padding: 4px 16px;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .hero-authors {
+            color: rgba(255,255,255,0.85);
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+        }
+        .hero-authors a { color: rgba(255,255,255,0.95); border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .hero-authors a:hover { color: #fff; border-color: #fff; }
+        .hero-affiliations {
+            color: rgba(255,255,255,0.55);
+            font-size: 0.88rem;
+            margin-bottom: 28px;
+        }
+        .hero-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .hero-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 20px;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.14);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.18);
+            transition: all var(--transition);
+        }
+        .hero-link:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+            color: #fff;
+        }
+
+        /* ===== Content ===== */
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        .section {
+            padding: 60px 0 0;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+            display: inline-block;
+        }
+        .section-title span {
+            position: relative;
+        }
+        .section-title span::after {
+            content: '';
+            position: absolute;
+            left: 0; bottom: -4px;
+            width: 100%;
+            height: 3px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            opacity: 0.8;
+        }
+
+        /* ===== Abstract ===== */
+        .abstract {
+            font-size: 1.02rem;
+            line-height: 1.85;
+            color: var(--text);
+        }
+
+        /* ===== Highlights ===== */
+        .highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .highlight-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition);
+        }
+        .highlight-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        .highlight-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+        .highlight-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* ===== Figure ===== */
+        .figure {
+            margin: 32px 0;
+            text-align: center;
+        }
+        .figure img {
+            max-width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+        .figure-caption {
+            margin-top: 12px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ===== Table ===== */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 16px 0;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            background: var(--bg-surface);
+        }
+        thead {
+            background: color-mix(in srgb, var(--primary) 6%, var(--bg-surface));
+        }
+        th {
+            padding: 12px 16px;
+            font-weight: 600;
+            text-align: left;
+            border-bottom: 2px solid var(--border);
+            color: var(--text);
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: color-mix(in srgb, var(--primary) 3%, transparent); }
+        .table-category {
+            font-weight: 600;
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            padding-top: 16px;
+        }
+        .best { font-weight: 700; color: var(--primary); }
+        .second { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+        /* ===== Key Findings ===== */
+        .findings {
+            list-style: none;
+            margin-top: 8px;
+        }
+        .findings li {
+            position: relative;
+            padding: 16px 20px 16px 48px;
+            margin-bottom: 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition);
+        }
+        .findings li:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .findings li::before {
+            content: attr(data-num);
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .findings li strong {
+            color: var(--text);
+        }
+
+        /* ===== BibTeX ===== */
+        .bibtex-block {
+            background: color-mix(in srgb, var(--border) 40%, var(--bg));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+            margin-top: 12px;
+        }
+        .bibtex-block pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text);
+        }
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all var(--transition);
+        }
+        .copy-btn:hover { background: var(--primary-hover); }
+
+        /* ===== Footer ===== */
+        footer {
+            margin-top: 80px;
+            padding: 28px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            transition: border-color var(--transition);
+        }
+        footer p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== Fade In ===== */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .hero { padding: 100px 20px 48px; }
+            .hero-title { font-size: 1.7rem; }
+            .highlights { grid-template-columns: 1fr; }
+            .hero-links { gap: 8px; }
+            .hero-link { padding: 8px 14px; font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../../" class="nav-back"><i class="fas fa-arrow-left"></i> Thibaut Loiseau</a>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+                <i class="fas fa-sun"></i>
+            </button>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-inner">
+            <div class="hero-icon">
+                <img src="assets/rubik-icon.png" alt="RUBIK">
+            </div>
+            <div class="hero-venue">CVPR 2025</div>
+            <h1 class="hero-title">RUBIK <span class="accent"><br>A Structured Benchmark for Image Matching across Geometric Challenges</span></h1>
+            <p class="hero-authors">
+                <a href="../../">Thibaut Loiseau</a><sup>1</sup> &nbsp;&middot;&nbsp;
+                <a href="https://gbourmaud.github.io" target="_blank">Guillaume Bourmaud</a><sup>2</sup>
+            </p>
+            <p class="hero-affiliations">
+                <sup>1</sup>LIGM, Ecole des Ponts, Univ. Gustave Eiffel, CNRS &nbsp;&nbsp;
+                <sup>2</sup>Laboratoire IMS, Univ. de Bordeaux
+            </p>
+            <div class="hero-links">
+                <a href="https://arxiv.org/abs/2502.19955" target="_blank" class="hero-link">
+                    <i class="fas fa-file-pdf"></i> Paper
+                </a>
+                <a href="https://github.com/thibautloiseau/RUBIK" target="_blank" class="hero-link">
+                    <i class="fab fa-github"></i> Code
+                </a>
+                <a href="#bibtex" class="hero-link">
+                    <i class="fas fa-quote-right"></i> BibTeX
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="content">
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Abstract</span></h2>
+            <p class="abstract">
+                Camera pose estimation is crucial for many computer vision applications, yet existing benchmarks offer limited insight into method limitations across different geometric challenges. We introduce <strong>RUBIK</strong>, a novel benchmark that systematically evaluates image matching methods across well-defined geometric difficulty levels. Using three complementary criteria&mdash;overlap, scale ratio, and viewpoint angle&mdash;we organize <strong>16.5K image pairs</strong> from nuScenes into <strong>33 difficulty levels</strong>. Our comprehensive evaluation of <strong>14 methods</strong> reveals that while recent detector-free approaches achieve the best performance (&gt;47% success rate), they come with significant computational overhead compared to detector-based methods (150&ndash;600ms vs. 40&ndash;70ms). Even the best performing method succeeds on only 54.8% of the pairs, highlighting substantial room for improvement, particularly in challenging scenarios combining low overlap, large scale differences, and extreme viewpoint changes.
+            </p>
+            <div class="figure">
+                <img src="assets/teaser.png" alt="RUBIK teaser: examples of image pairs across three difficulty criteria">
+                <p class="figure-caption"><strong>RUBIK benchmark overview.</strong> Image pairs spanning three difficulty criteria: scene overlap, scale ratio, and viewpoint angle difference. The benchmark contains 16.5K image pairs across 33 difficulty levels and is used for comprehensive benchmarking of 14 methods.</p>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>At a Glance</span></h2>
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="highlight-number">16.5K</div>
+                    <div class="highlight-label">Image Pairs</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">33</div>
+                    <div class="highlight-label">Difficulty Levels</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">14</div>
+                    <div class="highlight-label">Methods Evaluated</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Approach</span></h2>
+            <p class="abstract">
+                RUBIK is built on images from nuScenes, a large-scale autonomous driving dataset. We carefully lift the original 3-DoF ground-plane poses to full 6-DoF using COLMAP, then generate dense co-visibility maps for each image pair by warping metric depth maps (UniDepth) and surface normals (Depth Anything V2) across views. These maps allow us to compute three complementary geometric criteria for each pair:
+            </p>
+            <div class="highlights" style="margin-top: 20px;">
+                <div class="highlight-card">
+                    <div class="highlight-number" style="font-size:1.3rem;">&omega;</div>
+                    <div class="highlight-label">Overlap<br><span style="font-size:0.78rem;">Co-visible pixel ratio</span></div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number" style="font-size:1.3rem;">&delta;</div>
+                    <div class="highlight-label">Scale Ratio<br><span style="font-size:0.78rem;">Camera distance ratio</span></div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number" style="font-size:1.3rem;">&theta;</div>
+                    <div class="highlight-label">Viewpoint Angle<br><span style="font-size:0.78rem;">Line-of-sight angle</span></div>
+                </div>
+            </div>
+            <p class="abstract" style="margin-top: 20px;">
+                Each criterion is quantized into bins, forming a 3D grid of difficulty levels. We populate each valid cell with 500 image pairs, yielding 33 levels and 16.5K pairs spanning the full spectrum of geometric challenges.
+            </p>
+            <div class="figure">
+                <img src="assets/boxes_3d.png" alt="3D grid organization of RUBIK benchmark" style="max-width: 380px;">
+                <p class="figure-caption"><strong>3D grid organization.</strong> Each axis represents one geometric criterion (overlap, scale ratio, viewpoint angle). While the binning strategy theoretically creates 80 combinations, only 33 are physically realizable&mdash;for instance, high overlap with small scale ratio rarely produces large viewpoint angles.</p>
+            </div>
+            <div class="figure">
+                <img src="assets/pipeline.png" alt="RUBIK co-visibility map estimation pipeline">
+                <p class="figure-caption"><strong>Dense co-visibility map estimation.</strong> Using normal and depth maps along with relative camera poses, we warp depth maps between views and apply geometric consistency checks to classify pixels as co-visible, occluded, or outside the field of view.</p>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Benchmark Results</span></h2>
+            <p class="abstract" style="margin-bottom: 16px;">
+                We evaluate 14 image matching methods using a standardized pipeline: image matching with default parameters, essential matrix estimation via MAGSAC++, and scale recovery using monocular depth. A pose is successful when rotation error &lt; 5&deg; and translation error &lt; 2m.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Avg. Rank &darr;</th>
+                            <th>Success (%)</th>
+                            <th>Time (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" class="table-category">Detector-based methods</td></tr>
+                        <tr><td>ALIKED + LightGlue</td><td class="best">5.3</td><td class="best">36.8</td><td class="second">45</td></tr>
+                        <tr><td>DISK + LightGlue</td><td class="second">5.4</td><td class="second">35.9</td><td>69</td></tr>
+                        <tr><td>SuperPoint + LightGlue</td><td>6.1</td><td>35.7</td><td class="best">43</td></tr>
+                        <tr><td>SIFT + LightGlue</td><td>7.3</td><td>33.1</td><td>194</td></tr>
+                        <tr><td>DeDoDe v2</td><td>8.6</td><td>30.4</td><td>282</td></tr>
+                        <tr><td>XFeat + LighterGlue</td><td>9.0</td><td>30.1</td><td class="best">43</td></tr>
+                        <tr><td>XFeat*</td><td>12.5</td><td>15.1</td><td>82</td></tr>
+                        <tr><td>XFeat</td><td>13.1</td><td>14.2</td><td>54</td></tr>
+                        <tr><td colspan="4" class="table-category">Detector-free methods</td></tr>
+                        <tr><td class="best">DUSt3R</td><td class="best">2.4</td><td class="best">54.8</td><td>257</td></tr>
+                        <tr><td class="second">MASt3R</td><td class="second">2.5</td><td class="second">53.6</td><td>173</td></tr>
+                        <tr><td>RoMa</td><td>2.7</td><td>47.3</td><td>614</td></tr>
+                        <tr><td>ELoFTR</td><td>9.5</td><td>26.6</td><td class="second">124</td></tr>
+                        <tr><td>ASpanFormer</td><td>9.8</td><td>24.8</td><td class="best">108</td></tr>
+                        <tr><td>LoFTR</td><td>10.8</td><td>24.9</td><td>185</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Key Findings</span></h2>
+            <ul class="findings">
+                <li data-num="1"><strong>Detector-free dominance.</strong> The top three methods (DUSt3R, MASt3R, RoMa) are all detector-free, suggesting that direct dense matching is more robust across varying geometric conditions.</li>
+                <li data-num="2"><strong>Speed&ndash;accuracy trade-off.</strong> While detector-free methods achieve better accuracy, they require more computation (150&ndash;600ms vs. 40&ndash;70ms). Detector-based methods like ALIKED + LightGlue offer competitive performance at a fraction of the cost.</li>
+                <li data-num="3"><strong>Matching strategy matters.</strong> The significant gap between XFeat variants highlights the critical importance of the matching strategy, even with the same feature detector.</li>
+                <li data-num="4"><strong>Room for improvement.</strong> Even the best method (DUSt3R) fails on over 45% of pairs, especially under low overlap, large scale differences, and extreme viewpoint changes&mdash;pointing to clear directions for future research.</li>
+            </ul>
+        </section>
+
+        <section class="section fade-in" id="bibtex">
+            <h2 class="section-title"><span>Citation</span></h2>
+            <div class="bibtex-block">
+                <button class="copy-btn" id="copy-bibtex"><i class="fas fa-copy"></i> Copy</button>
+                <pre>@inproceedings{loiseau2025rubik,
+  title={RUBIK: A structured benchmark for image matching across geometric challenges},
+  author={Loiseau, Thibaut and Bourmaud, Guillaume},
+  booktitle={Proceedings of the Computer Vision and Pattern Recognition Conference},
+  pages={27070--27080},
+  year={2025}
+}</pre>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Acknowledgments</span></h2>
+            <p class="abstract" style="font-size:0.92rem;">
+                This project has received funding from the Bosch Research Foundation (Bosch Forschungsstiftung), and was granted access to the HPC resources of IDRIS under the allocation 2024-AD011014905R1 made by GENCI.
+            </p>
+        </section>
+    </div>
+
+    <footer>
+        <div class="content">
+            <p>&copy; 2026 Thibaut Loiseau &middot; <a href="../../">Back to main page</a></p>
+        </div>
+    </footer>
+
+    <script>
+        // Dark mode
+        var root = document.documentElement;
+        var toggle = document.getElementById('theme-toggle');
+        var saved = localStorage.getItem('theme');
+        if (saved) root.setAttribute('data-theme', saved);
+        else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+        toggle.addEventListener('click', function () {
+            var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+        });
+
+        // Fade in
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        document.querySelectorAll('.fade-in').forEach(function (el) { obs.observe(el); });
+
+        // Copy BibTeX
+        document.getElementById('copy-bibtex').addEventListener('click', function () {
+            var text = this.parentElement.querySelector('pre').textContent;
+            var btn = this;
+            navigator.clipboard.writeText(text).then(function () {
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
