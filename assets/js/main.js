@@ -111,7 +111,7 @@ function parsePublication(text) {
 
 function ensureAbsoluteUrl(url) {
     if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/') || url.startsWith('projects/')) return url;
     return 'https://' + url;
 }
 
