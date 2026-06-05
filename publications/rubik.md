@@ -1,7 +1,7 @@
 ---
 id: rubik-2025
 title: "RUBIK: A Structured Benchmark for Image Matching across Geometric Challenges"
-authors: "Thibaut Loiseau, Guillaume Bourmaud"
+authors: "<u>Thibaut Loiseau</u>, <a href='https://gbourmaud.github.io' target='_blank'>Guillaume Bourmaud</a>"
 venue: "CVPR - Main Conference"
 year: 2025
 thumbnail: "assets/images/publications/rubik-thumbnail.jpg"
