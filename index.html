@@ -77,7 +77,35 @@
 
         <section id="news" class="section fade-in">
             <h2 class="section-title"><span>News</span></h2>
-            <div class="timeline">
+            <div class="timeline collapsed" id="news-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">May 2026</span>
+                        <p>I received an <a href="https://icml.cc" target="_blank">ICML 2026</a> Gold Reviewer Award!</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">Mar 2026</span>
+                        <p>I presented my work at <a href="https://www.bosch-ai.com" target="_blank">Bosch</a>.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">Jan 2026</span>
+                        <p>I started a visiting period at <a href="https://www.robots.ox.ac.uk/~vgg/" target="_blank">VGG</a>, University of Oxford.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">Dec 2025</span>
+                        <p>I attended <a href="https://neurips.cc/Conferences/2025" target="_blank">NeurIPS 2025</a> in San Diego and visited the <a href="https://bair.berkeley.edu" target="_blank">BAIR Lab</a> at UC Berkeley.</p>
+                    </div>
+                </div>
                 <div class="timeline-item">
                     <div class="timeline-dot"></div>
                     <div class="timeline-content">
@@ -114,6 +142,10 @@
                     </div>
                 </div>
             </div>
+            <button class="news-toggle" id="news-toggle" aria-expanded="false" aria-controls="news-timeline">
+                <span class="news-toggle-label">Show more</span>
+                <i class="fas fa-chevron-down news-toggle-icon"></i>
+            </button>
         </section>
 
         <section id="publications" class="section fade-in">

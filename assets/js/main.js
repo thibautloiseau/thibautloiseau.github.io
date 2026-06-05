@@ -38,6 +38,25 @@ document.addEventListener('DOMContentLoaded', async function () {
     // ===== Hero Canvas: 3D Point Cloud / SfM Animation =====
     initHeroCanvas();
 
+    // ===== News: Show More / Show Less =====
+    const newsToggle = document.getElementById('news-toggle');
+    const newsTimeline = document.getElementById('news-timeline');
+    if (newsToggle && newsTimeline) {
+        const totalItems = newsTimeline.querySelectorAll('.timeline-item').length;
+        const visibleByDefault = 5;
+        if (totalItems <= visibleByDefault) {
+            newsToggle.style.display = 'none';
+        } else {
+            const label = newsToggle.querySelector('.news-toggle-label');
+            label.textContent = 'Show more';
+            newsToggle.addEventListener('click', function () {
+                const expanded = newsTimeline.classList.toggle('collapsed') === false;
+                newsToggle.setAttribute('aria-expanded', String(expanded));
+                label.textContent = expanded ? 'Show less' : 'Show more';
+            });
+        }
+    }
+
     // ===== Scroll Fade-In =====
     const observer = new IntersectionObserver(
         function (entries) {
