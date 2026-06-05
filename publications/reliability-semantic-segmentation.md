@@ -1,7 +1,7 @@
 ---
 id: reliability-semantic-segmentation-2024
 title: "Reliability in Semantic Segmentation: Can We Use Synthetic Data?"
-authors: "<u>Thibaut Loiseau</u>, <a href='https://tuanhungvu.github.io/' target='_blank'>Tuan-Hung Vu</a>, <a href='https://scholar.google.fr/citations?user=QnRpMJAAAAAJ' target='_blank'>Mickael Chen</a>, <a href='https://ptrckprz.github.io/' target='_blank'>Patrick Pérez</a>, and <a href='https://cord.isir.upmc.fr/' target='_blank'>Matthieu Cord</a>"
+authors: "<a href='https://thibautloiseau.github.io/' target='_blank'><u>Thibaut Loiseau</u></a>, <a href='https://tuanhungvu.github.io/' target='_blank'>Tuan-Hung Vu</a>, <a href='https://scholar.google.fr/citations?user=QnRpMJAAAAAJ' target='_blank'>Mickael Chen</a>, <a href='https://ptrckprz.github.io/' target='_blank'>Patrick Pérez</a>, and <a href='https://cord.isir.upmc.fr/' target='_blank'>Matthieu Cord</a>"
 venue: "ECCV - Main Conference & Workshop"
 year: 2024
 thumbnail: "assets/images/publications/reliability-thumbnail.png"
