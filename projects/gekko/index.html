@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gekko - Revisiting Cross-View Completion: Self-Supervised Pre-Training via Reconstruction Error Comparison</title>
+    <link rel="icon" type="image/svg+xml" href="../../assets/images/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg-surface: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #7c3aed;
+            --text: #1a1a2e;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --venue: #059669;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --bg-surface: #1e293b;
+            --primary: #60a5fa;
+            --primary-hover: #93bbfd;
+            --secondary: #a78bfa;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --venue: #34d399;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.4);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        [hidden] { display: none !important; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text); line-height: 1.7; background: var(--bg);
+            transition: background-color var(--transition), color var(--transition);
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: var(--primary); text-decoration: none; transition: color var(--transition); }
+        a:hover { color: var(--primary-hover); }
+        ::selection { background: var(--primary); color: #fff; }
+
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(250,250,250,0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-shadow: 0 1px 0 var(--border);
+            transition: background-color var(--transition);
+        }
+        [data-theme="dark"] .navbar { background: rgba(15,23,42,0.85); }
+        .nav-inner {
+            max-width: 900px; margin: 0 auto; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between; height: 56px;
+        }
+        .nav-back {
+            font-size: 0.88rem; font-weight: 500; color: var(--text-muted);
+            display: flex; align-items: center; gap: 6px; transition: color var(--transition);
+        }
+        .nav-back:hover { color: var(--text); }
+        .theme-toggle {
+            background: none; border: 1px solid var(--border);
+            width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); transition: all var(--transition);
+        }
+        .theme-toggle:hover { color: var(--text); border-color: var(--text-muted); background: var(--border); }
+        .theme-toggle .fa-sun { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-moon { display: none; }
+        [data-theme="dark"] .theme-toggle .fa-sun { display: inline; color: #fbbf24; }
+
+        .hero {
+            position: relative; padding: 120px 24px 60px;
+            text-align: center; overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, #2d1b69 0%, #7c3aed 45%, #f59e0b 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 12s ease infinite;
+        }
+        .hero-bg::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .hero-inner {
+            position: relative; z-index: 1; max-width: 800px; margin: 0 auto;
+        }
+        .hero-icon {
+            width: 80px; height: 80px; margin: 0 auto 20px;
+            border-radius: 16px; overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #7c3aed, #2d1b69);
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px;
+        }
+        .hero-icon img { width: 100%; height: auto; display: block; }
+        .hero-venue {
+            display: inline-block; padding: 4px 16px; border-radius: 50px;
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+            color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .hero-venue .spotlight { color: #fbbf24; }
+        .hero-title {
+            font-size: 2.5rem; font-weight: 800; color: #fff;
+            letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 12px;
+        }
+        .hero-title .accent { color: rgba(255,255,255,0.7); font-weight: 600; }
+        .hero-authors {
+            color: rgba(255,255,255,0.85); font-size: 1.05rem; margin-bottom: 8px;
+        }
+        .hero-authors a { color: rgba(255,255,255,0.95); border-bottom: 1px solid rgba(255,255,255,0.3); }
+        .hero-authors a:hover { color: #fff; border-color: #fff; }
+        .hero-affiliations {
+            color: rgba(255,255,255,0.55); font-size: 0.88rem; margin-bottom: 28px;
+        }
+        .hero-links {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+        }
+        .hero-link {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 20px; border-radius: 50px;
+            background: rgba(255,255,255,0.14); backdrop-filter: blur(10px);
+            color: #fff; font-size: 0.88rem; font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.18);
+            transition: all var(--transition);
+        }
+        .hero-link:hover {
+            background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.35);
+            transform: translateY(-2px); color: #fff;
+        }
+
+        .content { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+        .section { padding: 60px 0 0; }
+        .section-title {
+            font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em;
+            margin-bottom: 24px; display: inline-block;
+        }
+        .section-title span { position: relative; }
+        .section-title span::after {
+            content: ''; position: absolute; left: 0; bottom: -4px;
+            width: 100%; height: 3px; border-radius: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary)); opacity: 0.8;
+        }
+        .abstract { font-size: 1.02rem; line-height: 1.85; color: var(--text); }
+
+        .highlights {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px;
+        }
+        .highlight-card {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px 20px; text-align: center;
+            box-shadow: var(--shadow-sm); transition: all var(--transition);
+        }
+        .highlight-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .highlight-number {
+            font-size: 2rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            line-height: 1.2;
+        }
+        .highlight-label { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+        .figure { margin: 32px 0; text-align: center; }
+        .figure img {
+            max-width: 100%; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+        .figure-caption {
+            margin-top: 12px; font-size: 0.88rem; color: var(--text-muted);
+            line-height: 1.6; max-width: 700px; margin-left: auto; margin-right: auto;
+        }
+
+        /* --- Method figure composed in CSS from the individual PNGs --- */
+        .method-step { margin: 28px 0 0; }
+        .method-step-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .step-badge {
+            flex: none; width: 26px; height: 26px; border-radius: 8px; margin-top: 3px;
+            background: linear-gradient(135deg, #7c3aed, #f59e0b);
+            color: #fff; font-size: 0.72rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .step-text { font-size: 0.95rem; line-height: 1.7; color: var(--text); }
+        .panel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .panel {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 10px;
+            box-shadow: var(--shadow-sm); transition: all var(--transition);
+        }
+        .panel:hover { box-shadow: var(--shadow-md); }
+        .panel img { width: 100%; height: auto; display: block; border-radius: 8px; }
+        .panel-label { margin-top: 10px; text-align: center; line-height: 1.45; }
+        .panel-label strong { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+        .panel-label span { font-size: 0.78rem; color: var(--text-muted); }
+        .colorbar {
+            height: 10px; border-radius: 5px; margin: 12px 2px 0;
+            background: linear-gradient(90deg, #0d0887, #6a00a8, #b12a90, #e16462, #fca636, #f0f921);
+        }
+        .colorbar-labels {
+            display: flex; justify-content: space-between;
+            font-size: 0.72rem; color: var(--text-muted); margin: 4px 2px 0; font-weight: 500;
+        }
+        .eq {
+            background: color-mix(in srgb, var(--border) 40%, var(--bg));
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 18px 20px; margin: 24px 0 12px; text-align: center; overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.95rem;
+            color: var(--text); white-space: nowrap;
+        }
+
+        .contrib-list { list-style: none; margin-top: 8px; }
+        .contrib-list li {
+            position: relative; padding: 16px 20px 16px 48px; margin-bottom: 12px;
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow-sm);
+            transition: all var(--transition);
+        }
+        .contrib-list li:hover { box-shadow: var(--shadow-md); }
+        .contrib-list li::before {
+            content: attr(data-num); position: absolute; left: 16px; top: 16px;
+            width: 22px; height: 22px; border-radius: 6px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff; font-size: 0.72rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .contrib-list li strong { color: var(--text); }
+
+        .table-wrapper {
+            overflow-x: auto; margin: 16px 0;
+            border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.85rem; background: var(--bg-surface);
+        }
+        thead { background: color-mix(in srgb, var(--primary) 6%, var(--bg-surface)); }
+        th {
+            padding: 12px 14px; font-weight: 600; text-align: left;
+            border-bottom: 2px solid var(--border); color: var(--text); white-space: nowrap;
+        }
+        td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: color-mix(in srgb, var(--primary) 3%, transparent); }
+        .table-category { font-weight: 600; font-style: italic; color: var(--text-muted); font-size: 0.8rem; padding-top: 14px; }
+        .best { font-weight: 700; color: var(--primary); }
+        .second { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+        .table-note { font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; margin-top: 4px; }
+
+        .qualitative-grid {
+            display: flex; flex-direction: column; gap: 12px; margin-top: 16px;
+        }
+        .qualitative-grid img {
+            width: 100%; border-radius: var(--radius);
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+        }
+
+        .color-legend {
+            display: flex; gap: 20px; justify-content: center;
+            margin: 16px 0 8px; font-size: 0.88rem; font-weight: 500;
+        }
+        .color-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .color-dot {
+            width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+        }
+
+        .bibtex-block, .code-block {
+            background: color-mix(in srgb, var(--border) 40%, var(--bg));
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 20px; position: relative; margin-top: 12px;
+        }
+        .bibtex-block pre {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+            line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: var(--text);
+        }
+        /* Code must not be re-wrapped: it scrolls inside its own box instead. */
+        .code-block pre {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            line-height: 1.65; white-space: pre; color: var(--text);
+            overflow-x: auto; padding-right: 90px;
+        }
+        .code-block pre .c { color: var(--text-muted); }
+        .code-label {
+            font-size: 0.82rem; font-weight: 600; color: var(--text-muted);
+            margin-top: 26px; margin-bottom: -2px;
+        }
+        .code-label:first-of-type { margin-top: 8px; }
+        /* The pre scrolls horizontally, so its padding cannot hold the button
+           clear of the code on a narrow screen. Give the button its own row. */
+        @media (max-width: 700px) {
+            .code-block { padding-top: 14px; }
+            .code-block .copy-btn { position: static; margin: 0 0 12px auto; }
+            .code-block pre { padding-right: 0; }
+        }
+        .copy-btn {
+            position: absolute; top: 12px; right: 12px;
+            padding: 6px 14px; border-radius: 8px;
+            background: var(--primary); color: #fff; border: none;
+            font-size: 0.8rem; font-weight: 500; font-family: inherit; cursor: pointer;
+            display: flex; align-items: center; gap: 5px; transition: all var(--transition);
+        }
+        .copy-btn:hover { background: var(--primary-hover); }
+
+        footer {
+            margin-top: 80px; padding: 28px 0; text-align: center;
+            border-top: 1px solid var(--border); transition: border-color var(--transition);
+        }
+        footer p { font-size: 0.85rem; color: var(--text-muted); }
+
+        .fade-in {
+            opacity: 0; transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        /* --- Interactive method explorer -------------------------------- */
+        #gekko-explorer {
+            width: min(1080px, calc(100vw - 40px));
+            margin: 28px 0 0 50%; transform: translateX(-50%);
+        }
+        .gk-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .gk-tab, .gk-fields button, .gk-seg button, .gk-step, .gk-btn {
+            font-family: inherit; cursor: pointer; color: var(--text-muted);
+            background: var(--bg-surface); border: 1px solid var(--border);
+            transition: all var(--transition);
+        }
+        .gk-tab { padding: 7px 15px; border-radius: 50px; font-size: 0.82rem; font-weight: 500; }
+        .gk-tab:hover, .gk-fields button:hover, .gk-seg button:hover, .gk-step:hover { color: var(--text); border-color: var(--text-muted); }
+        .gk-tab.on {
+            color: #fff; border-color: transparent;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+        .gk-card {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow-sm);
+            padding: 20px 20px 18px; margin-bottom: 18px;
+        }
+        .gk-card-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .gk-card-head h3 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+        .gk-ctrls { display: flex; align-items: center; gap: 10px; }
+        .gk-btn {
+            width: 32px; height: 32px; border-radius: 8px; font-size: 0.75rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .gk-btn:hover { color: var(--text); border-color: var(--text-muted); }
+        .gk-seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .gk-seg button { border: none; border-right: 1px solid var(--border); padding: 7px 12px; font-size: 0.76rem; }
+        .gk-seg button:last-child { border-right: none; }
+        .gk-seg button.on { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); font-weight: 600; }
+
+        .gk-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+        .gk-step {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 11px; border-radius: 8px; font-size: 0.74rem;
+        }
+        .gk-step b {
+            width: 16px; height: 16px; border-radius: 5px; font-size: 0.62rem;
+            background: var(--border); color: var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .gk-step.on { color: var(--text); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+        .gk-step.on b { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
+
+        .gk-diagram { position: relative; }
+        .gk-wires { position: absolute; inset: 0; overflow: visible; pointer-events: none; z-index: 0; }
+        .gk-wire { fill: none; stroke: color-mix(in srgb, var(--text-muted) 45%, transparent); stroke-width: 1.8; }
+        .gk-head { fill: color-mix(in srgb, var(--text-muted) 55%, transparent); }
+        .gk-head-x { fill: color-mix(in srgb, var(--secondary) 75%, transparent); }
+        .gk-flow {
+            fill: none; stroke: var(--primary); stroke-width: 3.4; stroke-linecap: round;
+            stroke-dasharray: 11 19; opacity: 0; transition: opacity 0.2s;
+            animation: gkflow 0.55s linear infinite;
+        }
+        @keyframes gkflow { to { stroke-dashoffset: -30; } }
+        @media (prefers-reduced-motion: reduce) {
+            .gk-flow { animation: none; stroke-dasharray: 5 7; }
+            .gk-node, .gk-cmp-out { transition: none; }
+        }
+        /* every edge reached so far keeps flowing; the current step flows brightest */
+        .gk-diagram[data-stage="2"] .gk-flow.e-ref, .gk-diagram[data-stage="2"] .gk-flow.e-tgt,
+        .gk-diagram[data-stage="3"] .gk-flow.e-tok, .gk-diagram[data-stage="3"] .gk-flow.e-cross,
+        .gk-diagram[data-stage="4"] .gk-flow.e-outa, .gk-diagram[data-stage="4"] .gk-flow.e-outb,
+        .gk-diagram[data-stage="4"] .gk-flow.e-cmp,
+        .gk-diagram[data-stage="5"] .gk-flow.e-cmp { opacity: 1; }
+        .gk-diagram[data-stage="3"] .gk-flow.e-ref, .gk-diagram[data-stage="3"] .gk-flow.e-tgt,
+        .gk-diagram[data-stage="4"] .gk-flow.e-ref, .gk-diagram[data-stage="4"] .gk-flow.e-tgt,
+        .gk-diagram[data-stage="4"] .gk-flow.e-tok, .gk-diagram[data-stage="4"] .gk-flow.e-cross,
+        .gk-diagram[data-stage="5"] .gk-flow.e-ref, .gk-diagram[data-stage="5"] .gk-flow.e-tgt,
+        .gk-diagram[data-stage="5"] .gk-flow.e-tok, .gk-diagram[data-stage="5"] .gk-flow.e-cross,
+        .gk-diagram[data-stage="5"] .gk-flow.e-outa, .gk-diagram[data-stage="5"] .gk-flow.e-outb { opacity: 0.38; }
+        .gk-flow.e-cross { stroke: var(--secondary); }
+        
+        .gk-diagram[data-focus="b"] .gk-wire.e-cross { stroke-dasharray: 3 6; }
+        .gk-diagram[data-focus="a"] .gk-wire.e-tok-b, .gk-diagram[data-focus="a"] .gk-wire.e-outb,
+        .gk-diagram[data-focus="b"] .gk-wire.e-tok-a, .gk-diagram[data-focus="b"] .gk-wire.e-outa,
+        .gk-diagram[data-focus="b"] .gk-wire.e-cross, .gk-diagram[data-focus="b"] .gk-wire.e-ref { opacity: 0.25; }
+        .gk-diagram[data-focus="a"] .gk-flow.e-tok-b, .gk-diagram[data-focus="a"] .gk-flow.e-outb,
+        .gk-diagram[data-focus="b"] .gk-flow.e-tok-a, .gk-diagram[data-focus="b"] .gk-flow.e-outa,
+        .gk-diagram[data-focus="b"] .gk-flow.e-cross, .gk-diagram[data-focus="b"] .gk-flow.e-ref { opacity: 0 !important; }
+
+        .gk-grid {
+            position: relative; z-index: 1; display: grid;
+            grid-template-columns: 1.2fr 0.72fr 0.95fr 1.2fr;
+            gap: 22px 30px; align-items: center;
+        }
+        .gk-grid [data-id="ref"]  { grid-area: 1 / 1; }
+        .gk-grid [data-id="encr"] { grid-area: 1 / 2; }
+        .gk-grid [data-id="deca"] { grid-area: 1 / 3; }
+        .gk-grid [data-id="outa"] { grid-area: 1 / 4; }
+        .gk-grid [data-id="cmp"]  { grid-area: 2 / 4; }
+        .gk-grid [data-id="tgt"]  { grid-area: 3 / 1; }
+        .gk-grid [data-id="enct"] { grid-area: 3 / 2; }
+        .gk-grid [data-id="decb"] { grid-area: 3 / 3; }
+        .gk-grid [data-id="outb"] { grid-area: 3 / 4; }
+        .gk-node {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: 9px; text-align: center; font-size: 0.78rem; line-height: 1.35;
+            color: var(--text); opacity: 0.42; transition: opacity 0.25s, border-color 0.25s, box-shadow 0.25s;
+        }
+        .gk-node.lit { opacity: 1; border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); box-shadow: var(--shadow-sm); }
+        .gk-node img { width: 100%; height: auto; display: block; border-radius: 6px; }
+        .gk-node-t { font-size: 0.72rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+        .gk-node-s { font-size: 0.68rem; color: var(--text-muted); margin-top: 6px; }
+        .gk-enc { font-weight: 600; font-size: 0.76rem; padding: 16px 8px; }
+        .gk-dec { position: relative; font-weight: 600; font-size: 0.76rem; padding: 20px 8px 14px; }
+        .gk-dec em { font-weight: 400; font-style: normal; font-size: 0.7rem; color: var(--text-muted); }
+        .gk-tag {
+            position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+            padding: 2px 8px; border-radius: 50px; font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.04em; text-transform: uppercase; color: #fff;
+        }
+        .gk-pass-a .gk-tag { background: var(--secondary); }
+        .gk-pass-b .gk-tag { background: var(--text-muted); }
+        .gk-masknote { color: var(--secondary); font-weight: 600; }
+        .gk-diagram[data-focus="a"] .gk-pass-b, .gk-diagram[data-focus="a"] [data-id="outb"],
+        .gk-diagram[data-focus="b"] .gk-pass-a, .gk-diagram[data-focus="b"] [data-id="outa"],
+        .gk-diagram[data-focus="b"] [data-id="ref"], .gk-diagram[data-focus="b"] [data-id="encr"] {
+            opacity: 0.14 !important; box-shadow: none;
+        }
+        .gk-cmp { padding: 12px 10px; }
+        .gk-cmp-eq {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: var(--text);
+            background: color-mix(in srgb, var(--border) 40%, var(--bg));
+            border: 1px solid var(--border); border-radius: 8px; padding: 8px 6px;
+            white-space: nowrap; overflow-x: auto;
+        }
+        .gk-cmp-out {
+            margin-top: 10px; text-align: center;
+            opacity: 0.18; transition: opacity 0.25s;
+        }
+        .gk-diagram[data-stage="5"] .gk-cmp-out { opacity: 1; }
+        .gk-cmp-out img { width: 116px; max-width: 100%; margin: 0 auto; border-radius: 6px; display: block; }
+        .gk-cmp-out span { font-size: 0.68rem; color: var(--text-muted); }
+        .gk-stage-text { font-size: 0.86rem; line-height: 1.65; color: var(--text-muted); margin-top: 16px; }
+        .gk-stage-text b { color: var(--text); }
+
+        .gk-legend { display: flex; gap: 14px; font-size: 0.76rem; color: var(--text-muted); }
+        .gk-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .gk-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+        .gk-fields { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .gk-fields button { padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; }
+        .gk-fields button.on { color: var(--primary); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); font-weight: 600; }
+
+        .gk-explore { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr); gap: 18px; }
+        .gk-map { width: 100%; height: auto; display: block; border-radius: 8px; cursor: crosshair; }
+        .gk-maphint { font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 6px; }
+        .gk-scale { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .gk-scale span { font-size: 0.66rem; color: var(--text-muted); white-space: nowrap; }
+        .gk-scale-bar { flex: 1; height: 8px; border-radius: 4px; }
+        .gk-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+        .gk-inspect { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+        .gk-crops { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+        .gk-crops figure { text-align: center; }
+        .gk-crops canvas {
+            width: 92px; height: 92px; max-width: 100%; border-radius: 6px; display: block;
+            background: color-mix(in srgb, var(--border) 45%, var(--bg));
+        }
+        .gk-crops figcaption { font-size: 0.66rem; color: var(--text-muted); margin-top: 4px; }
+        .gk-kv { display: flex; justify-content: space-between; gap: 10px; font-size: 0.76rem; padding: 3px 0; }
+        .gk-kv span { color: var(--text-muted); }
+        .gk-kv b { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; white-space: nowrap; }
+        .gk-chip { display: inline-block; padding: 2px 9px; border-radius: 50px; font-size: 0.68rem; font-weight: 600; color: #fff; }
+        .gk-chip-cov { background: #10b981; }
+        .gk-chip-non { background: #f59e0b; }
+        .gk-chip-un { background: var(--text-muted); }
+        .gk-bars { margin: 8px 0 4px; }
+        .gk-bar { position: relative; height: 15px; margin-bottom: 4px; background: color-mix(in srgb, var(--border) 45%, transparent); border-radius: 4px; overflow: hidden; }
+        .gk-bar i { position: absolute; inset: 0 auto 0 0; display: block; border-radius: 4px; opacity: 0.75; transition: width 0.2s; }
+        .gk-bar span { position: absolute; left: 7px; top: 0; line-height: 15px; font-size: 0.63rem; font-weight: 600; color: var(--text); }
+        .gk-verdict { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; margin-top: 6px; }
+        .gk-verdict b { color: var(--text); }
+        .gk-empty { font-size: 0.78rem; color: var(--text-muted); text-align: center; padding: 18px 4px; }
+        .gk-scatter { width: 100%; height: 236px; display: block; }
+        .gk-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+        .gk-stat { text-align: center; padding: 12px 8px; border: 1px solid var(--border); border-radius: 10px; }
+        .gk-stat b {
+            display: block; font-size: 1.2rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .gk-stat span { font-size: 0.68rem; color: var(--text-muted); line-height: 1.4; display: block; margin-top: 2px; }
+
+        @media (max-width: 900px) {
+            .gk-grid { grid-template-columns: 1fr; gap: 26px; }
+            .gk-grid > * { grid-area: auto !important; }
+            .gk-grid [data-id="cmp"] { order: 9; }
+            .gk-explore { grid-template-columns: 1fr; }
+            .gk-stats { grid-template-columns: repeat(2, 1fr); }
+            .gk-node img { max-width: 240px; margin: 0 auto; }
+        }
+
+
+        /* --- "Beyond ScanNet" panels ------------------------------------ */
+        /* Same full-bleed width as the method explorer: four 512x384 panels are
+           unreadable inside the 800px text column, which is what the flat figures
+           these replace used to be. */
+        #gekko-beyond {
+            width: min(1080px, calc(100vw - 40px));
+            margin: 26px 0 0 50%; transform: translateX(-50%);
+        }
+        #gekko-beyond .gk-card { margin-bottom: 22px; }
+        .gb-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        /* Two panels, so they are held to roughly the width of card 1's four rather
+           than stretched to fill the full-bleed column. */
+        .gb-pca { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 780px; margin: 0 auto; }
+        .gb-pair {
+            display: flex; align-items: center; gap: 10px;
+            max-width: 780px; margin: 0 auto 16px;   /* lines up with the panels below */
+        }
+        .gb-pair span { font-size: 0.71rem; color: var(--text-muted); margin-right: 2px; }
+        .gb-pair img {
+            width: 128px; height: auto; display: block; border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .gb-pan { min-width: 0; }
+        .gb-pan canvas, .gb-pan img {
+            width: 100%; height: auto; display: block; border-radius: 8px;
+            background: color-mix(in srgb, var(--border) 45%, var(--bg));
+        }
+        .gb-pan[data-link] canvas, .gb-pca canvas { cursor: crosshair; }
+        .gb-pan figcaption { margin-top: 8px; text-align: center; line-height: 1.4; }
+        .gb-pan figcaption b { display: block; font-size: 0.76rem; font-weight: 600; color: var(--text); }
+        .gb-pan figcaption span { font-size: 0.69rem; color: var(--text-muted); }
+        .gb-hint { font-size: 0.71rem; color: var(--text-muted); text-align: center; margin-top: 14px; }
+        .gb-controls {
+            display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 20px; align-items: center; margin-top: 14px;
+        }
+        .gb-slider { display: flex; align-items: center; gap: 10px; font-size: 0.74rem; color: var(--text-muted); }
+        .gb-slider input { flex: 1; min-width: 80px; accent-color: var(--primary); }
+        .gb-slider b { color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .gb-legend { margin-top: 0; }
+        .gb-read { transition: opacity var(--transition); }
+        .gb-read.gb-idle { opacity: 0.7; }
+        /* Nothing picked yet: the empty bars and swatch would read as broken UI. */
+        .gb-read.gb-idle .gk-bars, .gb-read.gb-idle .gb-swatch { display: none; }
+        .gb-read .gk-bars { margin: 0 0 5px; }
+        .gb-verdict { font-size: 0.74rem; color: var(--text-muted); line-height: 1.5; }
+        /* The value sits at the far end, clear of the fill, so it stays legible whatever
+           the bar is doing underneath it. */
+        .gb-read .gk-bar b {
+            position: absolute; right: 8px; top: 0; line-height: 15px;
+            font-size: 0.63rem; font-weight: 700; color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .gb-verdict b { color: var(--text); }
+        .gb-probe { display: flex; align-items: flex-start; gap: 10px; }
+        .gb-swatch {
+            width: 26px; height: 26px; border-radius: 6px; flex: none; margin-top: 2px;
+            border: 1px solid var(--border);
+        }
+        .gb-probe-txt { font-size: 0.78rem; color: var(--text); line-height: 1.45; }
+        .gb-probe-txt b { font-variant-numeric: tabular-nums; }
+        .gb-probe-txt span { display: block; font-size: 0.7rem; color: var(--text-muted); }
+        .gb-note {
+            font-size: 0.8rem; color: var(--text); line-height: 1.6;
+            margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--border);
+        }
+        /* The fixed methodology line, set below the per-pair reading of the panels. */
+        .gb-meta { font-size: 0.75rem; color: var(--text-muted); line-height: 1.55; margin-top: 8px; }
+
+        @media (max-width: 900px) {
+            .gb-row { grid-template-columns: repeat(2, 1fr); }
+            .gb-controls { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .gb-row, .gb-pca { grid-template-columns: 1fr; }
+            .gb-pair { flex-wrap: wrap; }
+        }
+
+        @media (max-width: 768px) {
+            .hero { padding: 100px 20px 48px; }
+            .hero-title { font-size: 1.7rem; }
+            .highlights { grid-template-columns: 1fr; }
+            .hero-links { gap: 8px; }
+            .hero-link { padding: 8px 14px; font-size: 0.82rem; }
+            .panel-grid { grid-template-columns: 1fr; }
+            .eq { font-size: 0.8rem; padding: 14px 12px; }
+        }
+    </style>
+
+    <!-- GoatCounter analytics -->
+    <script data-goatcounter="https://thibautloiseau.goatcounter.com/count"
+            async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-inner">
+            <span></span>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+                <i class="fas fa-sun"></i>
+            </button>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-inner">
+            <div class="hero-icon">
+                <img src="assets/gekko-icon.png" alt="Gekko">
+            </div>
+            <div class="hero-venue">arXiv 2026</div>
+            <h1 class="hero-title">Gekko <span class="accent"><br>Revisiting Cross-View Completion: Self-Supervised Pre-Training via Reconstruction Error Comparison</span></h1>
+            <p class="hero-authors">
+                <a href="../../">Thibaut Loiseau</a><sup>1</sup> &nbsp;&middot;&nbsp;
+                <a href="https://gbourmaud.github.io" target="_blank">Guillaume Bourmaud</a><sup>2</sup> &nbsp;&middot;&nbsp;
+                <a href="https://vincentlepetit.github.io" target="_blank">Vincent Lepetit</a><sup>1</sup>
+            </p>
+            <p class="hero-affiliations">
+                <sup>1</sup>LIGM, Ecole des Ponts, Univ. Gustave Eiffel, CNRS &nbsp;&nbsp;
+                <sup>2</sup>IMS, Univ. de Bordeaux, CNRS
+            </p>
+            <div class="hero-links">
+                <a href="https://arxiv.org/abs/2609.01530" target="_blank" class="hero-link">
+                    <i class="fas fa-file-pdf"></i> Paper
+                </a>
+                <a href="https://github.com/thibautloiseau/gekko" target="_blank" class="hero-link">
+                    <i class="fab fa-github"></i> Code
+                </a>
+                <a href="https://huggingface.co/thibautloiseau/gekko-vitl-500k" target="_blank" class="hero-link">
+                    <i class="fas fa-cube"></i> Model
+                </a>
+                <a href="#bibtex" class="hero-link">
+                    <i class="fas fa-quote-right"></i> BibTeX
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="content">
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Abstract</span></h2>
+            <p class="abstract">
+                Self-supervised pre-training via cross-view completion learns strong features for 3D vision from co-visible regions of image pairs. However, the reference view provides little information for reconstructing non-co-visible patches, implicitly yielding a monocular training signal in these regions. We introduce <strong>Gekko</strong>, which turns this limitation into a useful signal. The <em>relative improvement</em> of the cross-view reconstruction error over a masked-autoencoder error is a self-supervised proxy for co-visibility: large improvements indicate co-visible regions, negligible ones non-co-visible areas. Gekko is a network, trained from scratch, that jointly performs cross-view completion, masked autoencoding, and per-pixel prediction of this relative improvement, providing an additional binocular signal for <em>all</em> masked regions without any ground-truth 3D annotation. Under identical architectures and training data, Gekko consistently outperforms CroCo on zero-shot correspondence estimation, relative pose estimation, and pointmap regression, with up to 6&times; higher accuracy at the strictest relative-pose threshold and a 22% drop in end-point error on ETH3D. The extra channel it learns is itself a strong co-visibility detector on unseen scenes, and Gekko&rsquo;s frozen features outperform released cross-view backbones of comparable or larger size. It can also be trained directly from raw videos with a simple stride-based curriculum, removing the cumbersome 3D preprocessing prior methods require while matching models trained on curated data. Code and pre-trained models are publicly available.
+            </p>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>At a Glance</span></h2>
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="highlight-number">6&times;</div>
+                    <div class="highlight-label">Higher pose accuracy than CroCo at the strictest threshold</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">0.76</div>
+                    <div class="highlight-label">Co-visibility AP from the predicted channel, vs 0.58 for reconstruction error alone</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="highlight-number">0</div>
+                    <div class="highlight-label">Ground-truth depth or camera poses required</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Method</span></h2>
+            <p class="abstract">
+                Cross-view completion masks a target view and asks the network to reconstruct it using a second, unmasked reference view. Where the views overlap, the reference carries the answer and the objective is genuinely binocular. Where they do not, the decoder falls back on the monocular context left inside the target itself, and the objective quietly degenerates into masked autoencoding, exactly where a binocular signal would be most valuable.
+            </p>
+            <p class="abstract" style="margin-top: 14px;">
+                Gekko turns this failure mode into a measurement. The <em>same</em> masked target is reconstructed twice by the <em>same</em> network: once attending to the reference view (cross-view completion, per-pixel error &#8467;<sub>CroCo</sub>), and once with the reference removed (masked autoencoding, error &#8467;<sub>MAE</sub>). Their relative improvement, C = (&#8467;<sub>MAE</sub> &minus; &#8467;<sub>CroCo</sub>) / &#8467;<sub>MAE</sub>, measures how much the second view actually helped at that pixel, and so acts as an annotation-free proxy for co-visibility. A third output channel is trained to predict it, which turns every masked pixel, co-visible or not, into binocular supervision.
+            </p>
+
+            <div class="figure" style="text-align: left;">
+
+                <div class="method-step">
+                    <div class="method-step-head">
+                        <div class="step-badge">a</div>
+                        <div class="step-text">
+                            <strong>Reconstruct the same masked target twice.</strong> One forward pass sees the reference view, the other does not. The weights, the mask and the target are identical in both.
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <img src="assets/reference_img.png" alt="Reference view of the office scene">
+                            <div class="panel-label"><strong>Reference view</strong><span>Unmasked, seen only by the cross-view pass</span></div>
+                        </div>
+                        <div class="panel">
+                            <img src="assets/masked_img.png" alt="Heavily masked target view">
+                            <div class="panel-label"><strong>Masked target</strong><span>90% of the patches are hidden</span></div>
+                        </div>
+                    </div>
+                    <div class="panel-grid" style="margin-top: 16px;">
+                        <div class="panel">
+                            <img src="assets/croco_recons.png" alt="Cross-view completion reconstruction of the target">
+                            <div class="panel-label"><strong>Cross-view completion &rarr; &#8467;<sub>CroCo</sub></strong><span>Reconstruction <em>with</em> the reference view</span></div>
+                        </div>
+                        <div class="panel">
+                            <img src="assets/mae_recons.png" alt="Masked autoencoder reconstruction of the target">
+                            <div class="panel-label"><strong>Masked autoencoding &rarr; &#8467;<sub>MAE</sub></strong><span>Reconstruction <em>without</em> the reference view</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="method-step">
+                    <div class="method-step-head">
+                        <div class="step-badge">b</div>
+                        <div class="step-text">
+                            <strong>Compare the two errors.</strong> Where a patch is <span style="color:#34d399;font-weight:600;">co-visible</span> the reference resolves it, so &#8467;<sub>CroCo</sub> &#8810; &#8467;<sub>MAE</sub> and C &asymp; 1. Where it is <span style="color:#f59e0b;font-weight:600;">not co-visible</span>, both passes rely on the same monocular evidence, so &#8467;<sub>CroCo</sub> &asymp; &#8467;<sub>MAE</sub> and C &asymp; 0. Here the shelving unit and the door appear in both views and come back sharp only in the cross-view pass, while the foreground desk, which the reference never sees, is reconstructed equally poorly either way.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="method-step">
+                    <div class="method-step-head">
+                        <div class="step-badge">c</div>
+                        <div class="step-text">
+                            <strong>Predict that improvement.</strong> Gekko adds one output channel &#264; to the cross-view head and trains it to regress C. Since C is defined everywhere the image is masked, &#264; supplies a binocular signal on <em>all</em> masked pixels, including those cross-view completion alone cannot learn from.
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <img src="assets/conf_plasma.png" alt="Predicted relative-improvement map, plasma colormap">
+                            <div class="panel-label"><strong>Predicted &#264;</strong><span>Bright where the reference helps</span></div>
+                            <div class="colorbar"></div>
+                            <div class="colorbar-labels">
+                                <span>&#264; &asymp; 0 &middot; not co-visible</span>
+                                <span>co-visible &middot; &#264; &asymp; 1</span>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <img src="assets/target_img.png" alt="Ground-truth target view">
+                            <div class="panel-label"><strong>Target view</strong><span>Ground truth, for reference only</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="figure-caption" style="margin-top: 20px;">
+                    <strong>The Gekko signal on one ScanNet pair.</strong> The predicted map fires on the shelves, the cabinet and the door, all of which also appear in the reference view, and stays dark on the foreground desk and floor, which fall outside it. No depth, pose or co-visibility annotation is used anywhere.
+                </p>
+            </div>
+
+            <p class="abstract" style="margin-top: 8px;">
+                Written as a loss, with sg[&middot;] the stop-gradient operator so that only &#264; is optimised by this term:
+            </p>
+            <div class="eq">
+                &#8467;<sub>RI</sub> = ( sg[&#8467;<sub>MAE</sub> &minus; &#8467;<sub>CroCo</sub>] &minus; sg[&#8467;<sub>MAE</sub>] &middot; &#264; )<sup>2</sup>
+            </div>
+            <p class="figure-caption" style="max-width: none; text-align: left;">
+                This is exactly &#8467;<sub>MAE</sub><sup>2</sup>(C &minus; &#264;)<sup>2</sup>: an error on the ratio, weighted by the MAE error itself. It down-weights pixels where &#8467;<sub>MAE</sub> is small, which is where the ratio is unreliable: a uniform wall that monocular context already reconstructs perfectly leaves no room for the reference view to improve on it, whether or not it is co-visible. The full objective sums the cross-view completion loss, the masked-autoencoding loss and &#8467;<sub>RI</sub>, optimised jointly from scratch in a single network.
+            </p>
+
+            <h3 style="font-size:1.05rem;font-weight:600;margin:44px 0 6px;">Explore the training step</h3>
+            <p class="abstract" style="font-size:0.95rem;">
+                Everything below is read off the two forward passes of the pretrained model on four ScanNet pairs. The co-visibility labels come from ground-truth depth and camera poses; they only <em>verify</em> the signal and play no part in producing it.
+            </p>
+            <div id="gekko-explorer"></div>
+            <p class="figure-caption" style="max-width:none;text-align:left;">
+                Where the reference view sees nothing, the median ratio &#8467;<sub>MAE</sub>&#8202;&divide;&#8202;&#8467;<sub>CroCo</sub> is <strong>1.00</strong> on every pair: the two passes are indistinguishable, which is the degeneracy Gekko is built around. The predicted &#264; also separates co-visible from non-co-visible patches <em>more reliably than the raw C it is trained on</em>, since averaging over the noise of a single 90% masked draw turns a crude per-pixel measurement into a clean estimate.
+            </p>
+
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Results</span></h2>
+
+            <p class="abstract" style="margin-bottom: 16px;">
+                <strong>Relative pose on ScanNet-1500.</strong> Percentage of pairs whose predicted pose falls within 10&deg; of rotation error and the given translation threshold (higher is better).
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>0.25m</th>
+                            <th>0.5m</th>
+                            <th>1m</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" class="table-category">Base, ScanNet-50</td></tr>
+                        <tr><td>CroCo-B</td><td>5.5</td><td>12.9</td><td>18.5</td></tr>
+                        <tr><td class="best">Gekko-B</td><td class="best">29.1</td><td class="best">43.3</td><td class="best">47.5</td></tr>
+                        <tr><td colspan="4" class="table-category">Base, ScanNet-all</td></tr>
+                        <tr><td>CroCo-B</td><td>6.6</td><td>15.7</td><td>23.0</td></tr>
+                        <tr><td class="best">Gekko-B</td><td class="best">43.7</td><td class="best">54.4</td><td class="best">57.6</td></tr>
+                        <tr><td colspan="4" class="table-category">Large, ScanNet-all</td></tr>
+                        <tr><td>CroCo-L</td><td>7.5</td><td>16.1</td><td>23.0</td></tr>
+                        <tr><td class="best">Gekko-L</td><td class="best">35.9</td><td class="best">50.6</td><td class="best">56.3</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">All rows are trained from scratch by us at matched architecture, data, global batch size and step count.</p>
+
+            <p class="abstract" style="margin: 32px 0 16px;">
+                <strong>Co-visibility from the predicted channel &#264;.</strong> How well each score separates co-visible from non-co-visible pixels, evaluated against ground-truth co-visibility (higher is better).
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Score</th>
+                            <th colspan="2" style="text-align:center;">ScanNet-1500</th>
+                            <th colspan="2" style="text-align:center;">7-Scenes</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>AP</th><th>ROC-AUC</th>
+                            <th>AP</th><th>ROC-AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>&#8467;<sub>CroCo</sub> (CroCo-B)</td><td>0.576</td><td>0.577</td><td>0.799</td><td>0.603</td></tr>
+                        <tr><td class="best">&#264; (Gekko-B)</td><td class="best">0.763</td><td class="best">0.737</td><td class="best">0.859</td><td class="best">0.702</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">
+                Chance AP is 0.502 on ScanNet-1500 and 0.726 on 7-Scenes. &#264; also beats the pseudo-label it was trained on (0.555 AP): learning to predict the relative improvement denoises it rather than merely imitating it.
+            </p>
+
+            <p class="abstract" style="margin: 32px 0 16px;">
+                <strong>Frozen Large backbones.</strong> Same probing protocol for every backbone, on relative pose, pointmap regression and optical flow.
+            </p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th style="text-align:center;">Pose &uarr;</th>
+                            <th colspan="3" style="text-align:center;">Pointmap Chamfer &darr;</th>
+                            <th style="text-align:center;">Flow &darr;</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>ScanNet-1500 @0.25m</th>
+                            <th>ScanNet</th><th>ETH3D</th><th>DL3DV</th>
+                            <th>Sintel AEPE clean</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6" class="table-category">Self-supervised pre-training</td></tr>
+                        <tr><td class="best">Gekko-L (ours)</td><td class="best">33.2</td><td class="best">0.077</td><td class="best">0.317</td><td class="best">1.122</td><td class="best">6.17</td></tr>
+                        <tr><td>CroCo v2-L</td><td>19.7</td><td>0.109</td><td>0.394</td><td>1.359</td><td>13.08</td></tr>
+                        <tr><td>MuM-L</td><td>19.9</td><td>0.106</td><td>0.377</td><td>1.321</td><td>22.44</td></tr>
+                        <tr><td colspan="6" class="table-category">Fully supervised reference</td></tr>
+                        <tr><td>VGGT</td><td>92.3</td><td>0.030</td><td>0.240</td><td>1.065</td><td>n/a</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">
+                <em>VGGT is a fully supervised ~1B-parameter reference rather than a baseline: it is trained with 3D supervision, it is far larger than the backbones above, and its training corpus contains ScanNet and DL3DV.</em>
+            </p>
+        </section>
+
+        <section class="section fade-in" id="generalisation">
+            <h2 class="section-title"><span>Beyond ScanNet</span></h2>
+            <p class="abstract" style="font-size:0.95rem;">
+                The results above use benchmarks close to the pre-training corpus. Both read-outs
+                below are taken on pairs from 7-Scenes, Cambridge Landmarks and ETH3D, datasets that
+                appear <em>nowhere</em> in the 12-source mix. Nothing is adapted between them: the
+                models are frozen and simply run on the pair. The second card keeps one ScanNet pair
+                at the end as an in-mix control.
+            </p>
+            <div id="gekko-beyond"></div>
+        </section>
+
+        <section class="section fade-in" id="usage">
+            <h2 class="section-title"><span>Use the Model</span></h2>
+            <p class="abstract" style="font-size:0.95rem;">
+                The pre-trained ViT-L is on the <a href="https://huggingface.co/thibautloiseau/gekko-vitl-500k" target="_blank">HuggingFace Hub</a>.
+                Torch Hub needs no checkout and pulls only <code>torch</code>, <code>einops</code>, <code>huggingface_hub</code> and <code>safetensors</code>, none of the training stack.
+            </p>
+
+            <p class="code-label">Load the pre-trained backbone</p>
+            <div class="code-block">
+                <button class="copy-btn"><i class="fas fa-copy"></i> Copy</button>
+                <pre>import torch
+
+model = torch.hub.load("thibautloiseau/gekko", "from_pretrained").eval()</pre>
+            </div>
+
+            <p class="table-note" style="margin-top:14px;">
+                <em>The <a href="https://github.com/thibautloiseau/gekko" target="_blank">code repository</a>
+                has the co-visibility channel, the downstream heads (pose, pointmap, depth, segmentation, flow)
+                and the full training recipe.</em>
+            </p>
+        </section>
+
+        <section class="section fade-in" id="bibtex">
+            <h2 class="section-title"><span>Citation</span></h2>
+            <div class="bibtex-block">
+                <button class="copy-btn" id="copy-bibtex"><i class="fas fa-copy"></i> Copy</button>
+                <pre>@article{loiseau2026gekko,
+  title={Revisiting Cross-View Completion: Self-Supervised Pre-Training via Reconstruction Error Comparison},
+  author={Loiseau, Thibaut and Bourmaud, Guillaume and Lepetit, Vincent},
+  journal={arXiv preprint arXiv:2609.01530},
+  year={2026}
+}</pre>
+            </div>
+        </section>
+
+        <section class="section fade-in">
+            <h2 class="section-title"><span>Acknowledgments</span></h2>
+            <p class="abstract" style="font-size:0.92rem;">
+                This project has received funding from the Bosch Research Foundation (Bosch Forschungsstiftung), the European Union (ERC Advanced Grant Explorer, Funding ID #101097259), and was granted access to the HPC resources of IDRIS under the allocation 2026-AD010617525R1 made by GENCI.
+            </p>
+        </section>
+    </div>
+
+    <footer>
+        <div class="content">
+            <p>&copy; 2026 Thibaut Loiseau &middot; <a href="../../">Back to main page</a></p>
+        </div>
+    </footer>
+
+    <script src="assets/explorer/data.js"></script>
+    <script src="assets/explorer.js"></script>
+    <script src="assets/beyond/data.js"></script>
+    <script src="assets/beyond.js"></script>
+    <script>
+        var root = document.documentElement;
+        var toggle = document.getElementById('theme-toggle');
+        var saved = localStorage.getItem('theme');
+        if (saved) root.setAttribute('data-theme', saved);
+        else if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme', 'dark');
+        toggle.addEventListener('click', function () {
+            var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+        });
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        document.querySelectorAll('.fade-in').forEach(function (el) { obs.observe(el); });
+        document.querySelectorAll('.copy-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var text = btn.parentElement.querySelector('pre').textContent;
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
